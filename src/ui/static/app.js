@@ -1635,6 +1635,20 @@ const app = createApp({
                         const weightValue = Number(site.weight ?? 0);
                         config.weight = Number.isFinite(weightValue) ? weightValue : 0;
 
+                        // 新增检测配置字段
+                        config.enable_check = site.enableCheck !== undefined ? site.enableCheck : true;
+                        if (site.checkModel && site.checkModel.trim()) {
+                            config.check_model = site.checkModel.trim();
+                        }
+                        config.check_message = site.checkMessage || 'hi';
+                        config.check_max_tokens = site.checkMaxTokens || 1;
+                        if (site.successContains && site.successContains.trim()) {
+                            config.success_contains = site.successContains.trim();
+                        }
+                        if (site.slowLatencyMs && site.slowLatencyMs !== 5000) {
+                            config.slow_latency_ms = site.slowLatencyMs;
+                        }
+
                         jsonObj[site.name.trim()] = config;
                     }
                 });
@@ -1691,7 +1705,14 @@ const app = createApp({
                             authValue: authValue,
                             active: config.active || false,
                             weight: weightValue,
-                            __mergedId: generateEntryId()
+                            __mergedId: generateEntryId(),
+                            // 新增检测配置字段
+                            enableCheck: config.enable_check !== undefined ? config.enable_check : true,
+                            checkModel: config.check_model || '',
+                            checkMessage: config.check_message || 'hi',
+                            checkMaxTokens: config.check_max_tokens || 1,
+                            successContains: config.success_contains || '',
+                            slowLatencyMs: config.slow_latency_ms || 5000
                         });
                     }
                 });
@@ -1724,6 +1745,11 @@ const app = createApp({
         };
 
         const generateEntryId = () => `merged-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+        // 根据服务类型返回默认检测模型
+        const getDefaultModel = (service) => {
+            return service === 'claude' ? 'claude-3-haiku-20240307' : 'gpt-3.5-turbo';
+        };
 
         const ensureEntryId = (site) => {
             if (!site.__mergedId) {
@@ -1883,7 +1909,14 @@ const app = createApp({
                     active: site.active || false,
                     derivedId: site.__mergedId || `${site.name}_${idx}`,
                     siteId,
-                    lastSyncedName: site.name
+                    lastSyncedName: site.name,
+                    // 新增检测配置字段
+                    enableCheck: site.enableCheck !== undefined ? site.enableCheck : true,
+                    checkModel: site.checkModel || '',
+                    checkMessage: site.checkMessage || 'hi',
+                    checkMaxTokens: site.checkMaxTokens || 1,
+                    successContains: site.successContains || '',
+                    slowLatencyMs: site.slowLatencyMs || 5000
                 });
             });
 
@@ -1922,7 +1955,14 @@ const app = createApp({
                         authType: group.authType,
                         authValue: entry.authValue,
                         active: entry.active,
-                        __mergedId: siteId
+                        __mergedId: siteId,
+                        // 新增检测配置字段
+                        enableCheck: entry.enableCheck !== undefined ? entry.enableCheck : true,
+                        checkModel: entry.checkModel || '',
+                        checkMessage: entry.checkMessage || 'hi',
+                        checkMaxTokens: entry.checkMaxTokens || 1,
+                        successContains: entry.successContains || '',
+                        slowLatencyMs: entry.slowLatencyMs || 5000
                     });
                 });
             });
