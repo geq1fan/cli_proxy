@@ -1,8 +1,58 @@
 #!/usr/bin/env python3
 import argparse
+import os
+import time
 from src.codex import ctl as codex
 from src.claude import ctl as claude
 from src.ui import ctl as ui
+
+
+def _detect_shell():
+    """自动检测当前shell类型"""
+    # 检查SHELL环境变量（Unix/Git Bash）
+    shell_env = os.environ.get('SHELL', '').lower()
+    if 'bash' in shell_env or 'sh' in shell_env:
+        return 'bash'
+
+    # 检查PowerShell
+    if os.environ.get('PSModulePath') or os.environ.get('POWERSHELL_DISTRIBUTION_CHANNEL'):
+        return 'powershell'
+
+    # 检查Windows CMD
+    comspec = os.environ.get('ComSpec', '').lower()
+    if 'cmd.exe' in comspec:
+        return 'cmd'
+
+    # 默认根据操作系统判断
+    import platform
+    if platform.system() == 'Windows':
+        return 'cmd'
+    return 'bash'
+
+
+def _print_env_vars(site_name, site_config, shell_type):
+    """根据shell类型输出环境变量设置"""
+    env_vars = {
+        'ANTHROPIC_AUTH_TOKEN': site_config.get('auth_token', ''),
+        'ANTHROPIC_API_KEY': site_config.get('api_key', ''),
+        'ANTHROPIC_BASE_URL': site_config.get('base_url', ''),
+        'DISABLE_TELEMETRY': 'true',
+        'DISABLE_COST_WARNINGS': 'true',
+        'API_TIMEOUT_MS': '600000',
+    }
+
+    print(f"# Claude Code CLI 环境变量设置 - 使用站点: {site_name}")
+    print(f"# Shell类型: {shell_type}")
+
+    if shell_type == 'bash':
+        for key, value in env_vars.items():
+            print(f'export {key}="{value}"')
+    elif shell_type == 'cmd':
+        for key, value in env_vars.items():
+            print(f'set {key}={value}')
+    elif shell_type == 'powershell':
+        for key, value in env_vars.items():
+            print(f'$env:{key}="{value}"')
 
 
 def _get_ui_status():
@@ -181,6 +231,44 @@ def main():
   clp ui                        启动UI界面(默认端口3300)"""
     )
 
+    # claude 子命令组
+    claude_parser = subparsers.add_parser(
+        'claude',
+        help='Claude 代理相关操作',
+        description='Claude 代理服务的高级操作',
+        formatter_class=common_formatter,
+        epilog="""示例:
+  clp claude activate 88code    使用88code站点配置激活环境
+  clp claude activate anyrouter 使用anyrouter站点配置激活环境"""
+    )
+    claude_subparsers = claude_parser.add_subparsers(
+        dest='claude_command',
+        title='Claude 可用命令',
+        help='Claude 子命令说明'
+    )
+
+    # claude activate 命令
+    claude_activate_parser = claude_subparsers.add_parser(
+        'activate',
+        help='激活Claude站点并输出环境变量',
+        description='从配置文件读取指定站点的配置，输出Claude Code CLI所需的环境变量设置',
+        formatter_class=common_formatter,
+        epilog="""示例:
+  clp claude activate 88code              使用88code站点的配置（自动检测shell）
+  clp claude activate anyrouter --shell bash      输出bash格式
+  clp claude activate anyrouter --shell cmd       输出Windows CMD格式
+  clp claude activate anyrouter --shell powershell 输出PowerShell格式"""
+    )
+    claude_activate_parser.add_argument(
+        'site_name',
+        help='站点名称（必须是claude.json中已定义的站点）'
+    )
+    claude_activate_parser.add_argument(
+        '--shell',
+        choices=['bash', 'cmd', 'powershell'],
+        help='指定shell类型（默认自动检测）'
+    )
+
     # server 命令
     server_parser = subparsers.add_parser(
         'server',
@@ -303,6 +391,41 @@ def main():
 
             # 显示服务状态
             print_status()
+    elif args.command == 'claude':
+        if args.claude_command == 'activate':
+            import json
+            from pathlib import Path
+
+            # 读取 claude.json 配置文件
+            config_file = Path.home() / '.clp' / 'claude.json'
+
+            if not config_file.exists():
+                print(f"错误: 配置文件不存在: {config_file}")
+                return
+
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"错误: 读取配置文件失败: {e}")
+                return
+
+            # 查找指定的站点配置
+            site_name = args.site_name
+            if site_name not in config_data:
+                print(f"错误: 站点 '{site_name}' 不存在")
+                print(f"可用站点: {', '.join(config_data.keys())}")
+                return
+
+            site_config = config_data[site_name]
+
+            # 确定shell类型
+            shell_type = args.shell if args.shell else _detect_shell()
+
+            # 输出环境变量设置脚本
+            _print_env_vars(site_name, site_config, shell_type)
+        else:
+            claude_parser.print_help()
     else:
         parser.print_help()
 

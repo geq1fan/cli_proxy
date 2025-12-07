@@ -2443,3 +2443,460 @@ header h1 {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     }
 }
+
+/* ========================================
+   T018: 站点可用性检测模块样式
+   ======================================== */
+
+.site-availability-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+}
+
+.site-availability-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.site-availability-section h2 {
+    font-size: 1.25rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.sites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.site-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.site-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.site-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.site-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.service-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.claude-badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.codex-badge {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.site-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.status-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.status-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.site-status.available .status-text {
+    color: #059669;
+    font-weight: 500;
+}
+
+.site-status.unavailable .status-text {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.site-status.checking .status-text {
+    color: #f59e0b;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 禁用检测状态 */
+.site-status.disabled {
+    background-color: #dbeafe;
+    border-left: 3px solid #3b82f6;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+.site-status.disabled .status-text {
+    color: #1e40af;
+    font-weight: 500;
+}
+
+/* 黄色降级状态（慢速或限流） */
+.site-status.degraded {
+    background-color: #fef3c7;
+    border-left: 3px solid #f59e0b;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+.site-status.degraded .status-text {
+    color: #92400e;
+    font-weight: 500;
+}
+
+/* 错误类型标签 */
+.sub-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.sub-status-badge.slow {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.sub-status-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.site-url {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sites-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .site-name {
+        max-width: 140px;
+    }
+}
+
+/* ========================================
+   T028: 检测按钮和时间戳样式
+   ======================================== */
+
+.section-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.last-check-time {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    display: none;
+}
+
+.check-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.check-btn:hover:not(:disabled) {
+    background: #2563eb;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.check-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.check-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.check-btn.checking {
+    position: relative;
+    padding-left: 32px;
+}
+
+.check-btn.checking::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .check-btn {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   User Story 3: 站点历史记录样式
+   ======================================== */
+
+/* 站点卡片展开样式 */
+.site-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.site-card:hover .site-main {
+    background: #f3f4f6;
+}
+
+.site-card.expanded {
+    border-color: #3b82f6;
+}
+
+.site-main {
+    transition: background 0.2s ease;
+}
+
+.expand-icon {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+}
+
+.site-card.expanded .expand-icon {
+    transform: rotate(0deg);
+}
+
+/* 历史记录区域 */
+.site-history {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.history-loading {
+    padding: 16px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.history-empty {
+    padding: 16px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.history-empty i {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+/* 历史统计 */
+.history-stats {
+    display: flex;
+    gap: 20px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.stat-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.stat-value.good {
+    color: #10b981;
+}
+
+.stat-value.poor {
+    color: #ef4444;
+}
+
+/* 历史记录列表 */
+.history-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.history-record {
+    display: grid;
+    grid-template-columns: 24px 100px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    transition: background 0.2s ease;
+}
+
+.history-record:hover {
+    background: #f3f4f6;
+}
+
+.history-record.available {
+    border-left: 3px solid #10b981;
+}
+
+.history-record.unavailable {
+    border-left: 3px solid #ef4444;
+}
+
+.history-icon {
+    font-size: 0.875rem;
+}
+
+.history-time {
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.history-detail {
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-record.unavailable .history-detail {
+    color: #ef4444;
+}
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+    .history-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .history-record {
+        grid-template-columns: 20px 80px 1fr;
+        gap: 8px;
+        font-size: 0.8rem;
+    }
+}

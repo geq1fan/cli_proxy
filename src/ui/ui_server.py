@@ -1537,6 +1537,191 @@ def update_system_config():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ========== 站点可用性检测 API ==========
+# T010, T011, T012: 新增站点可用性检测相关API
+
+@app.route('/api/site-availability/sites', methods=['GET'])
+def get_sites():
+    """
+    获取所有配置的站点
+
+    Returns:
+        JSON: {
+            "sites": [
+                {
+                    "service": "claude" | "codex",
+                    "name": "站点名称",
+                    "base_url": "基础URL",
+                    "active": true | false
+                }
+            ]
+        }
+    """
+    try:
+        from src.utils.site_checker import load_sites
+
+        sites = load_sites()
+
+        # 不返回敏感的认证信息给前端
+        safe_sites = []
+        for site in sites:
+            safe_sites.append({
+                'service': site['service'],
+                'name': site['name'],
+                'base_url': site['base_url'],
+                'active': site.get('active', False),
+                # 新增检测配置字段
+                'enable_check': site.get('enable_check', True),
+                'check_model': site.get('check_model', ''),
+                'check_message': site.get('check_message', 'hi'),
+                'check_max_tokens': site.get('check_max_tokens', 1),
+                'success_contains': site.get('success_contains', ''),
+                'slow_latency_ms': site.get('slow_latency_ms', 5000)
+            })
+
+        return jsonify({'sites': safe_sites})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/site-availability/check', methods=['POST'])
+def check_sites():
+    """
+    检测站点可用性
+
+    Request Body:
+        {
+            "sites": [站点列表],
+            "timeout": 10,  # 可选,超时时间(秒)
+            "max_concurrent": 5  # 可选,最大并发数
+        }
+
+    Returns:
+        JSON: {
+            "results": [
+                {
+                    "service": "claude" | "codex",
+                    "name": "站点名称",
+                    "available": true | false,
+                    "status_code": 200 | null,
+                    "response_time_ms": 235.6 | null,
+                    "error": "错误信息" | null,
+                    "error_type": "timeout" | "http_error" | "network_error" | null,
+                    "checked_at": "2025-12-07T10:30:00.000Z"
+                }
+            ]
+        }
+    """
+    try:
+        import asyncio
+        from src.utils.site_checker import (
+            load_sites,
+            check_all_sites_async,
+            add_check_result
+        )
+
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # 获取请求参数
+        site_names = data.get('sites', [])
+        timeout = data.get('timeout', 10)
+        max_concurrent = data.get('max_concurrent', 5)
+
+        # 如果没有指定站点,检测所有站点
+        if not site_names:
+            all_sites = load_sites()
+        else:
+            # 加载所有站点,然后过滤
+            all_sites = load_sites()
+            # 如果site_names是完整站点对象列表,直接使用
+            if site_names and isinstance(site_names[0], dict):
+                # 需要补充认证信息
+                sites_to_check = []
+                for site_req in site_names:
+                    # 从all_sites中找到匹配的站点
+                    for site in all_sites:
+                        if (site['service'] == site_req.get('service') and
+                            site['name'] == site_req.get('name')):
+                            sites_to_check.append(site)
+                            break
+                all_sites = sites_to_check
+
+        # 异步检测所有站点
+        results = asyncio.run(check_all_sites_async(
+            all_sites,
+            timeout=timeout,
+            max_concurrent=max_concurrent
+        ))
+
+        # 保存每个结果到历史记录
+        for result in results:
+            try:
+                add_check_result(result)
+            except Exception as e:
+                print(f"保存历史记录失败: {e}")
+
+        return jsonify({'results': results})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/site-availability/history', methods=['GET'])
+def get_history():
+    """
+    获取站点历史检测记录
+
+    Query Parameters:
+        service: "claude" | "codex" (可选)
+        name: 站点名称 (可选)
+
+    Returns:
+        JSON: {
+            "claude": {
+                "site_name": [CheckResult, ...]
+            },
+            "codex": {
+                "site_name": [CheckResult, ...]
+            }
+        }
+
+        或者如果指定了service和name:
+        {
+            "records": [CheckResult, ...]
+        }
+    """
+    try:
+        from src.utils.site_checker import load_history
+
+        service = request.args.get('service')
+        name = request.args.get('name')
+
+        history = load_history()
+
+        # 如果指定了service和name,返回特定站点的历史
+        if service and name:
+            records = history.get(service, {}).get(name, [])
+            return jsonify({'records': records})
+
+        # 如果只指定了service,返回该服务的所有站点历史
+        if service:
+            service_history = history.get(service, {})
+            return jsonify({service: service_history})
+
+        # 否则返回完整历史
+        return jsonify(history)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 def start_ui_server(port=3300):
     """启动UI服务器并打开浏览器"""
     print(f"启动Web UI服务器在端口 {port}")

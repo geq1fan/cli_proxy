@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: Site Availability Check API
+  description: API端点用于站点可用性检测功能
+  version: 1.0.0
+  contact:
+    name: CLI Proxy Team
+
+servers:
+  - url: http://localhost:3300
+    description: 本地开发服务器
+
+paths:
+  /api/site-availability/sites:
+    get:
+      summary: 获取所有站点列表
+      description: 从配置文件读取所有Claude和Codex站点
+      operationId: getSites
+      tags:
+        - Site Availability
+      responses:
+        '200':
+          description: 成功返回站点列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Site'
+              example:
+                sites:
+                  - service: claude
+                    name: 88code
+                    base_url: https://www.88code.org/api
+                    auth_token: "88_7ecdbf..."
+                    api_key: ""
+                    active: true
+                  - service: claude
+                    name: anyrouter
+                    base_url: https://anyrouter.hachimitsu.netlib.re
+                    auth_token: ""
+                    api_key: "sk-DXiKcT..."
+                    active: false
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/site-availability/check:
+    post:
+      summary: 检测站点可用性
+      description: 异步检测指定站点的可用性,返回即时结果
+      operationId: checkSites
+      tags:
+        - Site Availability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckRequest'
+            example:
+              sites:
+                - service: claude
+                  name: 88code
+                  base_url: https://www.88code.org/api
+                  auth_token: "88_7ecdbf..."
+                  api_key: ""
+                  active: true
+              timeout: 10
+              max_concurrent: 5
+      responses:
+        '200':
+          description: 检测完成,返回所有站点结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CheckResult'
+              example:
+                results:
+                  - service: claude
+                    name: 88code
+                    available: true
+                    status_code: 200
+                    response_time_ms: 235.6
+                    error: null
+                    error_type: null
+                    checked_at: "2025-12-07T10:30:00.000Z"
+                  - service: claude
+                    name: anyrouter
+                    available: false
+                    status_code: null
+                    response_time_ms: null
+                    error: "请求超时"
+                    error_type: "timeout"
+                    checked_at: "2025-12-07T10:30:05.000Z"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/site-availability/history:
+    get:
+      summary: 获取站点历史记录
+      description: 获取所有站点的检测历史记录
+      operationId: getHistory
+      tags:
+        - Site Availability
+      parameters:
+        - name: service
+          in: query
+          description: 过滤服务类型
+          required: false
+          schema:
+            type: string
+            enum: [claude, codex]
+        - name: name
+          in: query
+          description: 过滤站点名称
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功返回历史记录
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityHistory'
+              example:
+                claude:
+                  88code:
+                    - service: claude
+                      name: 88code
+                      available: true
+                      status_code: 200
+                      response_time_ms: 235.6
+                      error: null
+                      error_type: null
+                      checked_at: "2025-12-07T10:30:00.000Z"
+                    - service: claude
+                      name: 88code
+                      available: true
+                      status_code: 200
+                      response_time_ms: 240.2
+                      error: null
+                      error_type: null
+                      checked_at: "2025-12-07T10:00:00.000Z"
+                  anyrouter:
+                    - service: claude
+                      name: anyrouter
+                      available: false
+                      status_code: null
+                      response_time_ms: null
+                      error: "请求超时"
+                      error_type: "timeout"
+                      checked_at: "2025-12-07T10:30:05.000Z"
+                codex: {}
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Site:
+      type: object
+      required:
+        - service
+        - name
+        - base_url
+      properties:
+        service:
+          type: string
+          enum: [claude, codex]
+          description: 服务类型
+        name:
+          type: string
+          description: 站点名称(唯一标识)
+        base_url:
+          type: string
+          format: uri
+          description: 站点基础URL
+        auth_token:
+          type: string
+          description: 认证令牌(可选)
+        api_key:
+          type: string
+          description: API密钥(可选)
+        active:
+          type: boolean
+          description: 是否激活(配置状态)
+
+    CheckRequest:
+      type: object
+      required:
+        - sites
+      properties:
+        sites:
+          type: array
+          items:
+            $ref: '#/components/schemas/Site'
+          minItems: 1
+          description: 要检测的站点列表
+        timeout:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 10
+          description: 超时时间(秒)
+        max_concurrent:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: 最大并发检测数
+
+    CheckResult:
+      type: object
+      required:
+        - service
+        - name
+        - available
+        - checked_at
+      properties:
+        service:
+          type: string
+          enum: [claude, codex]
+          description: 服务类型
+        name:
+          type: string
+          description: 站点名称
+        available:
+          type: boolean
+          description: 是否可用
+        status_code:
+          type: integer
+          nullable: true
+          description: HTTP状态码(成功时)
+        response_time_ms:
+          type: number
+          format: float
+          nullable: true
+          description: 响应时间(毫秒)
+        error:
+          type: string
+          nullable: true
+          description: 错误信息(失败时)
+        error_type:
+          type: string
+          enum: [timeout, http_error, network_error, unknown]
+          nullable: true
+          description: 错误类型(失败时)
+        checked_at:
+          type: string
+          format: date-time
+          description: 检测时间戳(ISO 8601)
+
+    AvailabilityHistory:
+      type: object
+      description: 站点历史记录,按服务和站点分组
+      additionalProperties:
+        type: object
+        description: 服务级别(claude/codex)
+        additionalProperties:
+          type: array
+          description: 站点级别,最多10条记录
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/CheckResult'
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: 错误信息
+
+tags:
+  - name: Site Availability
+    description: 站点可用性检测相关API
